@@ -5,8 +5,8 @@ import { internalField } from "vega-lite";
 
 // // Load "data.csv" and log it to the console.
 
-var margin = {top: 10, right: 100, bottom: 30, left: 100},
-    width = 1450 - margin.left - margin.right,
+var margin = {top: 10, right: 100, bottom: 30, left: 70},
+    width = 900 - margin.left - margin.right,
     height = 400 - margin.top - margin.bottom;
 
 var svg = d3.select("#svg-div")
@@ -54,7 +54,7 @@ d3.csv("static/SP500_data.csv").then((data) => {
 
   dataPrime = calculateDataPrime(data)
 
-  var allGroup = ["SP500","Dividend", "Earnings", "ConsumerPriceIndex","LongInterestRate","RealPrice","RealDividend","RealEarnings","PE10"]
+  var allGroup = ["Dividend", "Earnings", "ConsumerPriceIndex","SP500"]
 
   d3.select("#selectButton")
     .selectAll('myOptions')
@@ -76,11 +76,10 @@ d3.csv("static/SP500_data.csv").then((data) => {
     .call(d3.axisBottom(x).ticks(10));
 
   var y = d3.scaleLinear()
-    .domain([0, d3.max(data, (d) => (+d.SP500))])
+    .domain([0, d3.max(data, (d) => (+d.Dividend))])
     .range([height, 0])
   svg.append('g').attr('id', 'yaxis')
     .call(d3.axisLeft(y))
-
 
 
   var line = svg
@@ -89,62 +88,11 @@ d3.csv("static/SP500_data.csv").then((data) => {
       .datum(data)
       .attr("d", d3.line()
         .x(function(d){return x(parseTime(d.Date))})
-        .y(function(d){return y(d.SP500)})
+        .y(function(d){return y(d.Dividend)})
       )
-      .attr("stroke", function(d){return color("SP500")})
+      .attr("stroke", function(d){return color("Dividend")})
       .style("stroke-width",4)
       .style("fill", "none")
-
-    svg.append("text")
-        .attr('id', 'ylabel')
-        .attr("transform", "rotate(-90)")
-        .attr("y", -60)
-        .attr("x",0 - (height / 2))
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .text("SP500");
-
-    svg.append("text")
-        .attr('id', 'yunit')
-        .attr("y", -15)
-        .attr("x", -30)
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .text("Dollars");
-
-    svg.append("text")
-        .attr('id', 'time')
-        .attr("y", 360)
-        .attr("x", 1250)
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .text("Time");
-
-    bar.append("text")
-        .attr('id', 'barlabel')
-        .attr("transform", "rotate(-90)")
-        .attr("y", -60)
-        .attr("x",0 - (height / 2))
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .text("SP500");
-
-    bar.append("text")
-        .attr('id', 'barunit')
-        .attr("y", -15)
-        .attr("x", -30)
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .text("Dollars");
-
-    bar.append("text")
-        .attr('id', 'bartime')
-        .attr("y", 360)
-        .attr("x", 1250)
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .text("Time");
-
 
 
   /* new graph
@@ -153,46 +101,71 @@ d3.csv("static/SP500_data.csv").then((data) => {
   var newx = d3.scaleTime()
     .domain(d3.extent(dataPrime, (d) => (parseTime(d.Date))))
     .range([0, width])
-  bar.append('g').attr('id', 'barx')
+  bar.append('g')
     .attr('transform', 'translate(0,' + height + ')')
     .call(d3.axisBottom(newx).ticks(10));
 
   var newy = d3.scaleLinear()
     //.domain(d3.extent(data, (d) => (d[selectedGroup])))
-    .domain([-d3.max(dataPrime, (d) => Math.abs(d.SP500)), d3.max(dataPrime, (d) => Math.abs(d.SP500))])
+    .domain([d3.min(dataPrime, (d) => (d.Dividend)), d3.max(dataPrime, (d) => (d.Dividend))])
     .range([0.5 * height, 0.5 * -height])
 
-  bar.append('g').attr('id','bary')
+  bar.append('g')
     .call(d3.axisLeft().scale(newy))
     .attr('transform', 'translate(0,' + (0.5 * height) + ')')
 
   var bar_graph = bar
-    .append("g")
-      .attr('id', 'bar')
+      .append('g')
+      .append("path")
+        .datum(dataPrime)
+        .attr("d", d3.area()
+          .x((d) => newx(parseTime(d.Date)))
+          .y((d) => newy(d.Dividend))
+        )
+        //.attr('transform', 'translate(0,' + (-0.5 * height) + ')')
+        .attr("stroke", function(d){return color("Dividend")})
+        .style("stroke-width",4)
+        //.style("fill", "none")
+        .attr('transform', 'translate(0,' + (0.5 * height) + ')')
+        .append("g")
+        .append('rect')
+        .attr('id', 'fill')
+        .attr('fill', (d, i) => {
+          if (i === 0) {
+          return '#03a678';
+        } else {
+          return dataPrime[i - 1].Dividend > d.Dividend ? '#c0392b' : '#03a678';
+        }
+        })
+        .attr('transform', 'translate(0,' + (0.5 * height) + ')')
+  /*
       .selectAll()
       .data(dataPrime)
       .enter()
+      .append("g")
       .append('rect')
       .attr('id', 'fill')
       .attr('x', d => {
         return x(parseTime(d.Date));
       })
       .attr('y', d => {
-        return d.SP500 > 0? height/2 + newy(d.SP500): height/2;
+        return newy;
       })
       .attr('fill', (d, i) => {
         if (i === 0) {
         return '#03a678';
       } else {
-        return d.SP500 < 0 ? '#c0392b' : '#03a678';
+        return dataPrime[i - 1].Dividend > d.Dividend ? '#c0392b' : '#03a678';
       }
       })
-      .attr('width', 3)
-      .attr('height', (d) => {
-          return Math.abs(newy(d.SP500));
-      })
+      .attr('width', 1)
 
-      
+      .attr('height', (d) => {
+          return 20
+          //return height - yVolumeScale(d["Dividend"]);
+      })
+      .attr('transform', 'translate(0,' + (0.5 * height) + ')')
+      */
 
   function update(selectedGroup){
       //var dataFilter = data.map(function(d){return {Date: d.Date, value: d[selectedGroup]}})
@@ -202,10 +175,6 @@ d3.csv("static/SP500_data.csv").then((data) => {
       d3.select('#yaxis').remove();
       d3.select('#ylabel').remove();
       d3.select('#xaxis').remove();
-      d3.select('#barx').remove();
-      d3.select('#bary').remove();
-      d3.select('#barlabel').remove();
-
 
       svg
         .append('g').attr('id', 'yaxis')
@@ -214,30 +183,19 @@ d3.csv("static/SP500_data.csv").then((data) => {
       svg.append("text")
         .attr('id', 'ylabel')
         .attr("transform", "rotate(-90)")
-        .attr("y", -60)
+        .attr("y", 0 - margin.left)
         .attr("x",0 - (height / 2))
         .attr("dy", "1em")
         .style("text-anchor", "middle")
         .text(selectedGroup);
 
-
-       svg.append("text")
+      svg.append("text")
         .attr('id', 'yunit')
-        .attr("y", 360)
-        .attr("x", 830)
+        .attr("y", -15)
+        .attr("x", -30)
         .attr("dy", "1em")
         .style("text-anchor", "middle")
-        .text("Time");
-
-      bar.append("text")
-        .attr('id', 'barlabel')
-        .attr("transform", "rotate(-90)")
-        .attr("y", -60)
-        .attr("x",0 - (height / 2))
-        .attr("dy", "1em")
-        .style("text-anchor", "middle")
-        .text(selectedGroup);
-
+        .text("Dollars");
 
       line
         //.datum(dataFilter)
@@ -249,44 +207,12 @@ d3.csv("static/SP500_data.csv").then((data) => {
         )
         .attr("stroke", function(d) {return color(selectedGroup)})
 
-      newy
-        .domain([-d3.max(dataPrime, (d) => Math.abs(d[selectedGroup])), 
-          d3.max(dataPrime, (d) => Math.abs(d[selectedGroup]))])
-
-
-      bar.append('g').attr('id', 'bary')
-        .attr('transform', 'translate(0,' + (0.5 * height) + ')')
-        .call(d3.axisLeft().scale(newy))
-        
-
- 
-      bar_graph
-        .transition()
-        .duration(1000)
-        .attr('x', d => {
-          return x(parseTime(d.Date));
-        })
-        .attr('y', d => {
-          return d[selectedGroup] > 0? height/2 + newy(d[selectedGroup]): height/2;
-        })
-        .attr('fill', (d, i) => {
-          if (i === 0) {
-          return '#03a678';
-        } else {
-          return d[selectedGroup] < 0 ? '#c0392b' : '#03a678';
-        }
-        })
-        .attr('width', 3)
-        .attr('height', (d) => {
-            return Math.abs(newy(d[selectedGroup]));
-        })
   }
 
 
   function newDate(fromMonth, toMonth, selectedGroup){
 
     var newData = data;
-    d3.select('#barlabel').remove();
 
     newData = data.filter(function(d) {
       return (d3.timeMonth(parseTime(d.Date)) >= d3.timeMonth(parseMonth(fromMonth)))
@@ -294,26 +220,14 @@ d3.csv("static/SP500_data.csv").then((data) => {
     });
 
     console.log(newData);
-    
-    var newDataPrime = newData;
-    newDataPrime = calculateDataPrime(newData);
-    console.log(newDataPrime);
-
 
     x.domain(d3.extent(newData, (d) => (parseTime(d.Date))))
     y.domain([d3.min(newData, (d) => (+d[selectedGroup])), d3.max(newData, (d) => (+d[selectedGroup]))])
-
-    newy.domain([-d3.max(newDataPrime, (d) => Math.abs(d[selectedGroup])), 
-                  d3.max(newDataPrime, (d) => Math.abs(d[selectedGroup]))])
-    newx.domain(d3.extent(newDataPrime, (d) => (parseTime(d.Date))))
-
 
     d3.select('#yaxis').remove();
     d3.select('#xaxis').remove();
     d3.select('#ylabel').remove();
     d3.select('#yunit').remove();
-    d3.select('#barx').remove();
-    d3.select('#bary').remove();
 
     svg
       .append('g').attr('id', 'yaxis')
@@ -333,85 +247,22 @@ d3.csv("static/SP500_data.csv").then((data) => {
       )
       .attr("stroke", function(d) {return color(selectedGroup)})
 
-    bar
-      .append('g')
-      .attr('id', 'bary')
-      .attr('transform', 'translate(0,' + (0.5 * height) + ')')
-      .call(d3.axisLeft().scale(newy))
-      
-    bar
-      .append('g').attr('id', 'barx')
-      .attr('transform', 'translate(0,' + height + ')')
-      .call(d3.axisBottom(newx).ticks(10));
-    
-    bar_graph
-      .data(newDataPrime)
-      .transition()
-      .duration(1000)
-      .attr('x', d => {
-        return x(parseTime(d.Date));
-      })
-      .attr('y', d => {
-        return d[selectedGroup] > 0? height/2 + newy(d[selectedGroup]): height/2;
-      })
-      .attr('fill', (d, i) => {
-        if (i === 0) {
-        return '#03a678';
-      } else {
-        return d[selectedGroup] < 0 ? '#c0392b' : '#03a678';
-      }
-      })
-      .attr('width', 3)
-      .attr('height', (d) => {
-          return 0.9*Math.abs(newy(d[selectedGroup]));
-      })
-
-    bar_graph
-      .transition()
-      .duration(1000)
-      .attr('x', d => {
-        if (newx(parseTime(d.Date)) <= 0) {
-          return null;
-        }
-        return newx(parseTime(d.Date));
-      })
-      .attr('y', d => {
-        return d[selectedGroup] > 0? height/2 + newy(d[selectedGroup]): height/2;
-      })
-      .attr('fill', (d) => {
-        if (newx(parseTime(d.Date)) <= 0) {
-        return null;
-      } else {
-        return d[selectedGroup] < 0 ? '#c0392b' : '#03a678';
-      }
-      })
-      .attr('width', 3)
-      .attr('height', (d) => {
-          if (newx(parseTime(d.Date)) <= 0){
-            return 0;
-          }
-          return Math.abs(newy(d[selectedGroup]));
-      })
-
     svg.append("text")
         .attr('id', 'ylabel')
         .attr("transform", "rotate(-90)")
-        .attr("y", -60)
+        .attr("y", 0 - margin.left)
         .attr("x",0 - (height / 2))
         .attr("dy", "1em")
         .style("text-anchor", "middle")
         .text(selectedGroup);
 
-    bar.append("text")
-        .attr('id', 'barlabel')
-        .attr("transform", "rotate(-90)")
-        .attr("y", -60)
-        .attr("x",0 - (height / 2))
+      svg.append("text")
+        .attr('id', 'yunit')
+        .attr("y", -15)
+        .attr("x", -30)
         .attr("dy", "1em")
         .style("text-anchor", "middle")
-        .text(selectedGroup);
-
-
+        .text("Dollars");
 
   }
 
